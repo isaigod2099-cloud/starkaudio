@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stark Audio</title>
+  <style>
+    :root {
+      --bg-abyss: #050b16;
+      --bg-prussian: #091528;
+      --bg-ultramarine: #0d2240;
+      --bg-card: rgba(11, 27, 52, 0.86);
+      --border-glow: rgba(74, 158, 255, 0.22);
+      --text-main: #eef5ff;
+      --text-muted: #8ea8c8;
+      --accent: #3b82f6;
+      --accent-bright: #60a5fa;
+      --accent-soft: rgba(59, 130, 246, 0.18);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: var(--text-main);
+      background:
+        radial-gradient(circle at 18% 12%, rgba(29, 78, 216, 0.28), transparent 45%),
+        radial-gradient(circle at 85% 20%, rgba(14, 116, 144, 0.18), transparent 40%),
+        linear-gradient(160deg, var(--bg-abyss) 0%, var(--bg-prussian) 52%, var(--bg-ultramarine) 100%);
+      padding: 20px;
+    }
+
+    .app-shell {
+      max-width: 1180px;
+      margin: 0 auto;
+      display: grid;
+      gap: 18px;
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 20px;
+      border-radius: 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-glow);
+      backdrop-filter: blur(12px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-badge {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 1.05rem;
+      background: linear-gradient(135deg, #1d4ed8, #38bdf8);
+      color: #ffffff;
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.35);
+    }
+
+    .brand h1 {
+      font-size: 1.25rem;
+      letter-spacing: 0.04em;
+    }
+
+    .brand p {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    .header-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    button, .file-label {
+      cursor: pointer;
+      border: 1px solid var(--border-glow);
+      background: rgba(16, 40, 76, 0.85);
+      color: var(--text-main);
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 0.86rem;
+      font-weight: 600;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    }
+
+    button:hover, .file-label:hover {
+      background: rgba(37, 99, 235, 0.35);
+      border-color: var(--accent-bright);
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    button.active {
+      background: var(--accent);
+      border-color: var(--accent-bright);
+      color: #fff;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1.35fr 1fr;
+      gap: 18px;
+    }
+
+    @media (max-width: 900px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-glow);
+      border-radius: 16px;
+      padding: 18px;
+      backdrop-filter: blur(12px);
+    }
+
+    .panel-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      font-size: 0.98rem;
+      font-weight: 700;
+    }
+
+    .muted {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      font-weight: 500;
+    }
+
+    #visualizerCanvas {
+      width: 100%;
+      height: 150px;
+      display: block;
+      border-radius: 12px;
+      background: rgba(4, 11, 24, 0.78);
+      border: 1px solid rgba(74, 158, 255, 0.14);
+      margin-bottom: 14px;
+    }
+
+    .now-playing {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 12px;
+    }
+
+    .track-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .track-artist {
+      font-size: 0.86rem;
+      color: var(--text-muted);
+    }
+
+    .seek-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    input[type="range"] {
+      accent-color: var(--accent-bright);
+      cursor: pointer;
+    }
+
+    #seekBar {
+      width: 100%;
+    }
+
+    .transport-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .transport-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .volume-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    .eq-section {
+      margin-top: 8px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(74, 158, 255, 0.14);
+    }
+
+    .eq-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .eq-bands {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 6px;
+      align-items: end;
+      padding-top: 6px;
+      overflow-x: auto;
+    }
+
+    .eq-band {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      min-width: 34px;
+    }
+
+    .eq-band input[type="range"] {
+      writing-mode: vertical-lr;
+      direction: rtl;
+      width: 18px;
+      height: 86px;
+    }
+
+    .eq-band span {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 9px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border-glow);
+      background: rgba(5, 14, 29, 0.85);
+      color: var(--text-main);
+      font-size: 0.88rem;
+      margin-bottom: 10px;
+      outline: none;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-bright);
+    }
+
+    .scroll-list {
+      max-height: 360px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-right: 4px;
+    }
+
+    .list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(8, 21, 42, 0.72);
+      border: 1px solid transparent;
+      font-size: 0.86rem;
+    }
+
+    .list-item.active {
+      border-color: var(--accent-bright);
+      background: var(--accent-soft);
+    }
+
+    .list-item-title {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .mini-btn {
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      border-radius: 8px;
+    }
+
+    .queue-panel {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(74, 158, 255, 0.14);
+    }
+
+    .queue-list {
+      max-height: 180px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header>
+      <div class="brand">
+        <div class="brand-badge">SA</div>
+        <div>
+          <h1>STARK AUDIO</h1>
+          <p id="statusText">Loading cloud library from tracks.json...</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <label class="file-label" for="localFilesInput">+ Local Audio</label>
+        <input id="localFilesInput" type="file" accept="audio/*" multiple />
+        <button id="pipBtn" type="button">Mini PiP</button>
+      </div>
+    </header>
+
+    <div class="main-grid">
+      <section class="panel">
+        <div class="panel-title">
+          <span>Now Playing &amp; Spectrum</span>
+          <span class="muted" id="audioEngineState">Web Audio Ready</span>
+        </div>
+
+        <canvas id="visualizerCanvas" width="700" height="150"></canvas>
+
+        <div class="now-playing">
+          <div class="track-title" id="nowPlayingTitle">Select or load a track</div>
+          <div class="track-artist" id="nowPlayingArtist">Stark Audio Library</div>
+        </div>
+
+        <div class="seek-row">
+          <span id="currentTimeLabel">0:00</span>
+          <input id="seekBar" type="range" min="0" max="100" step="0.1" value="0" />
+          <span id="durationLabel">0:00</span>
+        </div>
+
+        <div class="transport-row">
+          <div class="transport-buttons">
+            <button id="prevBtn" type="button">Prev</button>
+            <button id="playPauseBtn" type="button">Play</button>
+            <button id="nextBtn" type="button">Next</button>
+            <button id="shuffleBtn" type="button">Shuffle</button>
+            <button id="repeatBtn" type="button">Repeat</button>
+          </div>
+
+          <div class="volume-box">
+            <span>Vol</span>
+            <input id="volumeBar" type="range" min="0" max="1" step="0.01" value="0.85" />
+          </div>
+        </div>
+
+        <div class="eq-section">
+          <div class="eq-header">
+            <span class="panel-title" style="margin:0;">10-Band Equalizer</span>
+            <button id="resetEqBtn" class="mini-btn" type="button">Flat EQ</button>
+          </div>
+          <div class="eq-bands" id="eqBands"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <span>Library</span>
+          <span class="muted" id="trackCount">0 tracks</span>
+        </div>
+
+        <input
+          id="searchInput"
+          class="search-input"
+          type="search"
+          placeholder="Filter 103+ tracks by name..."
+        />
+
+        <div class="scroll-list" id="trackList"></div>
+
+        <div class="queue-panel">
+          <div class="panel-title">
+            <span>Up Next / Queue</span>
+            <span class="muted" id="queueCount">0 in queue</span>
+          </div>
+          <div class="scroll-list queue-list" id="queueList"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <audio id="starkAudio" preload="metadata"></audio>
+
+  <script>
+    (() => {
+      const audio = document.getElementById("starkAudio");
+      const canvas = document.getElementById("visualizerCanvas");
+      const ctx = canvas.getContext("2d");
+
+      const ui = {
+        statusText: document.getElementById("statusText"),
+        trackCount: document.getElementById("trackCount"),
+        queueCount: document.getElementById("queueCount"),
+        trackList: document.getElementById("trackList"),
+        queueList: document.getElementById("queueList"),
+        searchInput: document.getElementById("searchInput"),
+        nowPlayingTitle: document.getElementById("nowPlayingTitle"),
+        nowPlayingArtist: document.getElementById("nowPlayingArtist"),
+        playPauseBtn: document.getElementById("playPauseBtn"),
+        prevBtn: document.getElementById("prevBtn"),
+        nextBtn: document.getElementById("nextBtn"),
+        shuffleBtn: document.getElementById("shuffleBtn"),
+        repeatBtn: document.getElementById("repeatBtn"),
+        seekBar: document.getElementById("seekBar"),
+        currentTimeLabel: document.getElementById("currentTimeLabel"),
+        durationLabel: document.getElementById("durationLabel"),
+        volumeBar: document.getElementById("volumeBar"),
+        eqBands: document.getElementById("eqBands"),
+        resetEqBtn: document.getElementById("resetEqBtn"),
+        localFilesInput: document.getElementById("localFilesInput"),
+        pipBtn: document.getElementById("pipBtn")
+      };
+
+      const state = {
+        tracks: [],
+        queue: [],
+        currentIndex: -1,
+        shuffle: false,
+        repeat: false,
+        searchQuery: "",
+        isSeeking: false
+      };
+
+      // --- Web Audio API: 10-Band EQ + Spectrum Visualizer ---
+      const EQ_FREQS = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
+      let audioCtx = null;
+      let analyser = null;
+      let frequencyData = null;
+      let filters = [];
+      const eqSliders = [];
+
+      function initWebAudio() {
+        if (audioCtx) {
+          if (audioCtx.state === "suspended") {
+            audioCtx.resume().catch(() => {});
+          }
+          return;
+        }
+
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return;
+
+        audioCtx = new AudioContextClass();
+        const sourceNode = audioCtx.createMediaElementSource(audio);
+
+        filters = EQ_FREQS.map((freq, idx) => {
+          const filter = audioCtx.createBiquadFilter();
+          filter.type = idx === 0 ? "lowshelf" : idx === EQ_FREQS.length - 1 ? "highshelf" : "peaking";
+          filter.frequency.value = freq;
+          filter.Q.value = 1.2;
+          filter.gain.value = eqSliders[idx] ? Number(eqSliders[idx].value) : 0;
+          return filter;
+        });
+
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        frequencyData = new Uint8Array(analyser.frequencyBinCount);
+
+        let chainHead = sourceNode;
+        for (const f of filters) {
+          chainHead.connect(f);
+          chainHead = f;
+        }
+        chainHead.connect(analyser);
+        analyser.connect(audioCtx.destination);
+      }
+
+      function buildEqUI() {
+        ui.eqBands.innerHTML = "";
+        EQ_FREQS.forEach((freq, idx) => {
+          const wrap = document.createElement("div");
+          wrap.className = "eq-band";
+
+          const slider = document.createElement("input");
+          slider.type = "range";
+          slider.min = "-12";
+          slider.max = "12";
+          slider.step = "0.5";
+          slider.value = "0";
+          slider.title = `${freq >= 1000 ? freq / 1000 + "k" : freq} Hz`;
+
+          slider.addEventListener("input", () => {
+            const val = Number(slider.value);
+            if (filters[idx]) filters[idx].gain.value = val;
+          });
+
+          const label = document.createElement("span");
+          label.textContent = freq >= 1000 ? `${freq / 1000}k` : `${freq}`;
+
+          eqSliders.push(slider);
+          wrap.append(slider, label);
+          ui.eqBands.appendChild(wrap);
+        });
+
+        ui.resetEqBtn.addEventListener("click", () => {
+          eqSliders.forEach((slider, idx) => {
+            slider.value = "0";
+            if (filters[idx]) filters[idx].gain.value = 0;
+          });
+        });
+      }
+
+      function drawVisualizer() {
+        requestAnimationFrame(drawVisualizer);
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+
+        if (!analyser || !frequencyData || audio.paused) {
+          ctx.fillStyle = "rgba(96, 165, 250, 0.25)";
+          const bars = 48;
+          const gap = w / bars;
+          for (let i = 0; i < bars; i++) {
+            const barH = 4 + Math.sin(i * 0.45) * 2;
+            ctx.fillRect(i * gap + 2, h - barH - 6, Math.max(2, gap - 4), barH);
+          }
+          return;
+        }
+
+        analyser.getByteFrequencyData(frequencyData);
+        const barCount = Math.min(64, frequencyData.length);
+        const barWidth = w / barCount;
+
+        for (let i = 0; i < barCount; i++) {
+          const norm = frequencyData[i] / 255;
+          const barHeight = Math.max(4, norm * (h - 14));
+          const x = i * barWidth;
+          const y = h - barHeight - 6;
+
+          const grad = ctx.createLinearGradient(0, y, 0, h);
+          grad.addColorStop(0, "#60a5fa");
+          grad.addColorStop(1, "#1d4ed8");
+          ctx.fillStyle = grad;
+          ctx.fillRect(x + 1, y, Math.max(2, barWidth - 3), barHeight);
+        }
+      }
+
+      // --- Playback & Queue Logic ---
+      function formatTime(sec) {
+        if (!Number.isFinite(sec) || sec < 0) return "0:00";
+        const m = Math.floor(sec / 60);
+        const s = Math.floor(sec % 60);
+        return `${m}:${s < 10 ? "0" : ""}${s}`;
+      }
+
+      function updateMediaSession(track) {
+        if (!("mediaSession" in navigator) || !track) return;
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: track.title || "Untitled Track",
+          artist: track.artist || "Stark Audio",
+          album: track.isLocal ? "Local Files" : "Supabase Cloud"
+        });
+
+        navigator.mediaSession.setActionHandler("play", () => playCurrent());
+        navigator.mediaSession.setActionHandler("pause", () => audio.pause());
+        navigator.mediaSession.setActionHandler("previoustrack", () => prevTrack());
+        navigator.mediaSession.setActionHandler("nexttrack", () => nextTrack());
+      }
+
+      function setTrack(track, shouldAutoPlay = false) {
+        if (!track || !track.url) return;
+
+        // Enable anonymous CORS for remote URLs so Web Audio API can read stream data
+        if (!track.isLocal && /^https?:\/\//i.test(track.url)) {
+          audio.crossOrigin = "anonymous";
+        } else {
+          audio.removeAttribute("crossOrigin");
+        }
+
+        audio.src = track.url;
+        audio.load();
+
+        ui.nowPlayingTitle.textContent = track.title || "Untitled Track";
+        ui.nowPlayingArtist.textContent = track.artist || "Unknown Artist";
+        updateMediaSession(track);
+        renderLists();
+
+        if (shouldAutoPlay) {
+          playCurrent();
+        }
+      }
+
+      function playCurrent() {
+        if (!audio.src && state.queue.length) {
+          const startIdx = state.currentIndex >= 0 ? state.currentIndex : 0;
+          state.currentIndex = startIdx;
+          setTrack(state.queue[startIdx], false);
+        }
+        initWebAudio();
+        audio.play().catch((err) => {
+          console.warn("[Stark Audio] Playback failed:", err.message);
+        });
+      }
+
+      function togglePlayPause() {
+        if (audio.paused) {
+          playCurrent();
+        } else {
+          audio.pause();
+        }
+      }
+
+      function playQueueIndex(idx) {
+        if (idx < 0 || idx >= state.queue.length) return;
+        state.currentIndex = idx;
+        setTrack(state.queue[idx], true);
+      }
+
+      function nextTrack() {
+        if (!state.queue.length) return;
+        if (state.shuffle) {
+          const randIdx = Math.floor(Math.random() * state.queue.length);
+          playQueueIndex(randIdx);
+          return;
+        }
+        if (state.currentIndex + 1 < state.queue.length) {
+          playQueueIndex(state.currentIndex + 1);
+        } else if (state.repeat) {
+          playQueueIndex(0);
+        }
+      }
+
+      function prevTrack() {
+        if (!state.queue.length) return;
+        if (audio.currentTime > 3) {
+          audio.currentTime = 0;
+          return;
+        }
+        const prevIdx = state.currentIndex > 0 ? state.currentIndex - 1 : state.queue.length - 1;
+        playQueueIndex(prevIdx);
+      }
+
+      function enqueueTrack(track) {
+        state.queue.push(track);
+        renderLists();
+      }
+
+      // --- UI Rendering ---
+      function renderLists() {
+        const q = state.searchQuery.trim().toLowerCase();
+        const filtered = q
+          ? state.tracks.filter(
+              (t) =>
+                t.title.toLowerCase().includes(q) ||
+                (t.artist && t.artist.toLowerCase().includes(q))
+            )
+          : state.tracks;
+
+        ui.trackCount.textContent = `${state.tracks.length} tracks`;
+        ui.queueCount.textContent = `${state.queue.length} in queue`;
+
+        const activeTrack = state.queue[state.currentIndex];
+        ui.trackList.innerHTML = "";
+
+        filtered.forEach((track) => {
+          const row = document.createElement("div");
+          row.className = "list-item" + (activeTrack && activeTrack.url === track.url ? " active" : "");
+
+          const titleEl = document.createElement("div");
+          titleEl.className = "list-item-title";
+          titleEl.textContent = track.title;
+          titleEl.title = track.title;
+          titleEl.addEventListener("click", () => {
+            state.queue = [...state.tracks];
+            const idxInQueue = state.queue.findIndex((item) => item.url === track.url);
+            playQueueIndex(idxInQueue >= 0 ? idxInQueue : 0);
+          });
+
+          const qBtn = document.createElement("button");
+          qBtn.type = "button";
+          qBtn.className = "mini-btn";
+          qBtn.textContent = "+ Queue";
+          qBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            enqueueTrack(track);
+          });
+
+          row.append(titleEl, qBtn);
+          ui.trackList.appendChild(row);
+        });
+
+        ui.queueList.innerHTML = "";
+        state.queue.forEach((track, idx) => {
+          const row = document.createElement("div");
+          row.className = "list-item" + (idx === state.currentIndex ? " active" : "");
+
+          const titleEl = document.createElement("div");
+          titleEl.className = "list-item-title";
+          titleEl.textContent = `${idx === state.currentIndex ? "▶ " : ""}${idx + 1}. ${track.title}`;
+          titleEl.addEventListener("click", () => playQueueIndex(idx));
+
+          row.appendChild(titleEl);
+          ui.queueList.appendChild(row);
+        });
+      }
+
+      // --- Document Picture-in-Picture Mini-Player ---
+      async function openMiniPiP() {
+        if (!("documentPictureInPicture" in window)) {
+          alert("Document Picture-in-Picture is not supported in this browser.");
+          return;
+        }
+        try {
+          const pipWin = await window.documentPictureInPicture.requestWindow({
+            width: 340,
+            height: 170
+          });
+
+          pipWin.document.head.innerHTML = `
+            <style>
+              body {
+                margin: 0;
+                padding: 14px;
+                font-family: system-ui, sans-serif;
+                background: #071326;
+                color: #eef5ff;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                height: 100vh;
+                box-sizing: border-box;
+              }
+              .t { font-weight: 700; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+              .a { color: #8ea8c8; font-size: 0.78rem; margin-top: 2px; }
+              .row { display: flex; gap: 8px; }
+              button {
+                flex: 1;
+                padding: 8px;
+                border-radius: 8px;
+                border: 1px solid rgba(96,165,250,0.3);
+                background: #122c54;
+                color: #fff;
+                font-weight: 600;
+                cursor: pointer;
+              }
+            </style>
+          `;
+
+          pipWin.document.body.innerHTML = `
+            <div>
+              <div class="t" id="pipTitle">${ui.nowPlayingTitle.textContent}</div>
+              <div class="a" id="pipArtist">${ui.nowPlayingArtist.textContent}</div>
+            </div>
+            <div class="row">
+              <button id="pipPrev">Prev</button>
+              <button id="pipPlay">${audio.paused ? "Play" : "Pause"}</button>
+              <button id="pipNext">Next</button>
+            </div>
+          `;
+
+          const pipPlay = pipWin.document.getElementById("pipPlay");
+          pipWin.document.getElementById("pipPrev").addEventListener("click", prevTrack);
+          pipWin.document.getElementById("pipNext").addEventListener("click", nextTrack);
+          pipPlay.addEventListener("click", togglePlayPause);
+
+          const syncPip = () => {
+            const pt = pipWin.document.getElementById("pipTitle");
+            const pa = pipWin.document.getElementById("pipArtist");
+            if (pt) pt.textContent = ui.nowPlayingTitle.textContent;
+            if (pa) pa.textContent = ui.nowPlayingArtist.textContent;
+            if (pipPlay) pipPlay.textContent = audio.paused ? "Play" : "Pause";
+          };
+
+          audio.addEventListener("play", syncPip);
+          audio.addEventListener("pause", syncPip);
+          audio.addEventListener("loadedmetadata", syncPip);
+          pipWin.addEventListener("pagehide", () => {
+            audio.removeEventListener("play", syncPip);
+            audio.removeEventListener("pause", syncPip);
+            audio.removeEventListener("loadedmetadata", syncPip);
+          });
+        } catch (err) {
+          console.warn("[Stark Audio] PiP error:", err.message);
+        }
+      }
+
+      // --- Load tracks.json on Startup ---
+      async function loadTracksJson(path = "./tracks.json") {
+        try {
+          const res = await fetch(path, { cache: "no-store" });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          if (!Array.isArray(data)) throw new Error("tracks.json must be an array");
+
+          const parsed = data
+            .filter((item) => item && typeof item.url === "string" && item.url.trim())
+            .map((item, i) => ({
+              id: item.id ?? `sb-${i + 1}`,
+              title: item.title || `Track ${i + 1}`,
+              artist: item.artist || "Supabase Cloud",
+              url: item.url.trim(),
+              isLocal: false
+            }));
+
+          const seen = new Set(state.tracks.map((t) => t.url));
+          const unique = parsed.filter((t) => !seen.has(t.url));
+          state.tracks.push(...unique);
+
+          if (!state.queue.length && state.tracks.length) {
+            state.queue = [...state.tracks];
+            state.currentIndex = 0;
+            setTrack(state.queue[0], false);
+          }
+
+          renderLists();
+          ui.statusText.textContent = `Loaded ${state.tracks.length} tracks from tracks.json`;
+        } catch (err) {
+          ui.statusText.textContent = "No tracks.json found — use + Local Audio or add tracks.json";
+          console.warn("[Stark Audio] tracks.json load issue:", err.message);
+        }
+      }
+
+      // --- Event Listeners ---
+      audio.addEventListener("play", () => {
+        ui.playPauseBtn.textContent = "Pause";
+      });
+      audio.addEventListener("pause", () => {
+        ui.playPauseBtn.textContent = "Play";
+      });
+      audio.addEventListener("ended", nextTrack);
+
+      audio.addEventListener("loadedmetadata", () => {
+        ui.seekBar.max = Number.isFinite(audio.duration) ? audio.duration : 0;
+        ui.durationLabel.textContent = formatTime(audio.duration);
+      });
+
+      audio.addEventListener("timeupdate", () => {
+        if (!state.isSeeking) {
+          ui.seekBar.value = audio.currentTime || 0;
+        }
+        ui.currentTimeLabel.textContent = formatTime(audio.currentTime);
+      });
+
+      ui.seekBar.addEventListener("input", () => {
+        state.isSeeking = true;
+        ui.currentTimeLabel.textContent = formatTime(Number(ui.seekBar.value));
+      });
+
+      ui.seekBar.addEventListener("change", () => {
+        audio.currentTime = Number(ui.seekBar.value);
+        state.isSeeking = false;
+      });
+
+      ui.volumeBar.addEventListener("input", () => {
+        audio.volume = Number(ui.volumeBar.value);
+      });
+      audio.volume = Number(ui.volumeBar.value);
+
+      ui.playPauseBtn.addEventListener("click", togglePlayPause);
+      ui.nextBtn.addEventListener("click", nextTrack);
+      ui.prevBtn.addEventListener("click", prevTrack);
+
+      ui.shuffleBtn.addEventListener("click", () => {
+        state.shuffle = !state.shuffle;
+        ui.shuffleBtn.classList.toggle("active", state.shuffle);
+      });
+
+      ui.repeatBtn.addEventListener("click", () => {
+        state.repeat = !state.repeat;
+        ui.repeatBtn.classList.toggle("active", state.repeat);
+      });
+
+      ui.searchInput.addEventListener("input", (e) => {
+        state.searchQuery = e.target.value;
+        renderLists();
+      });
+
+      ui.localFilesInput.addEventListener("change", (e) => {
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
+
+        const localTracks = files.map((file, idx) => ({
+          id: `local-${Date.now()}-${idx}`,
+          title: file.name.replace(/\.[^/.]+$/, ""),
+          artist: "Local File",
+          url: URL.createObjectURL(file),
+          isLocal: true
+        }));
+
+        state.tracks.push(...localTracks);
+        if (!state.queue.length) {
+          state.queue = [...state.tracks];
+          state.currentIndex = 0;
+          setTrack(state.queue[0], false);
+        } else {
+          state.queue.push(...localTracks);
+        }
+        renderLists();
+        ui.statusText.textContent = `${state.tracks.length} total tracks (${localTracks.length} local added)`;
+      });
+
+      ui.pipBtn.addEventListener("click", openMiniPiP);
+
+      buildEqUI();
+      drawVisualizer();
+      loadTracksJson("./tracks.json");
+    })();
+  </script>
+</body>
+</html>
